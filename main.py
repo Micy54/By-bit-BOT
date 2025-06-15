@@ -3,80 +3,69 @@ import time
 import requests
 from pybit.unified_trading import HTTP
 from keep_alive import keep_alive
+import numpy as np
+import telegram
 
-# 🔐 Chiavi API
+# === CONFIG ===
 API_KEY = os.getenv("BYBIT_API_KEY")
 API_SECRET = os.getenv("BYBIT_API_SECRET")
-
-# ⚙️ Configurazione
 SYMBOL = "DOGEUSDT"
-INTERVAL = 1  # minuti
+INTERVAL = 1  # in minuti
 QTY_USDT = 3
 LEVERAGE = 5
+TG_CHAT_ID = 464125829
+TG_TOKEN = "7704558648:AAEf-9I8wzy650t1Qet06TfcbhK6gxuxpQU"
 
-# 📩 Telegram
-TELEGRAM_TOKEN = "7704558648:AAEF-9I8wzy650t1Qet06TfcbhK6gxuxpQU"
-TELEGRAM_CHAT_ID = "464125829"
-
-# 🔌 Sessione API Bybit
 session = HTTP(api_key=API_KEY, api_secret=API_SECRET)
 
-# 📤 Invia messaggi Telegram
-def send_telegram(message):
-    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
-    data = {"chat_id": TELEGRAM_CHAT_ID, "text": message}
-    try:
-        requests.post(url, data=data)
-    except:
-        print("[ERRORE] Telegram non inviato")
-
-# 📈 Preleva i dati OHLC
+# === FUNZIONI BASE ===
 def get_klines():
-    r = session.get_kline(
-        category="linear",
-        symbol=SYMBOL,
-        interval=str(INTERVAL),
-        limit=20
-    )
+    r = session.get_kline(category="linear", symbol=SYMBOL, interval=str(INTERVAL), limit=20)
     return [float(k["close"]) for k in r["result"]["list"]][::-1]
 
-# 🔢 Calcola RSI
-def rsi(data, period=14):
-    gains, losses = [], []
-    for i in range(1, period + 1):
-        delta = data[i] - data[i - 1]
-        (gains if delta > 0 else losses).append(abs(delta))
-    avg_gain = sum(gains) / period
-    avg_loss = sum(losses) / period
-    rs = avg_gain / avg_loss if avg_loss != 0 else 0
+def rsi(prices, period=14):
+    prices = np.array(prices)
+    delta = np.diff(prices)
+    gain = np.mean(delta[delta > 0]) if np.any(delta > 0) else 0
+    loss = -np.mean(delta[delta < 0]) if np.any(delta < 0) else 0
+    rs = gain / loss if loss != 0 else 100
     return 100 - (100 / (1 + rs))
 
-# 📊 Bande di Bollinger
-def bollinger(data, period=20):
-    ma = sum(data[-period:]) / period
-    std = (sum((x - ma) ** 2 for x in data[-period:]) / period) ** 0.5
+def bollinger(prices, period=20):
+    prices = np.array(prices[-period:])
+    ma = np.mean(prices)
+    std = np.std(prices)
     return ma, ma + 2 * std, ma - 2 * std
 
-# 📍 Invia ordine long/short
 def place_order(side):
-    price = float(session.get_ticker(symbol=SYMBOL)["result"]["list"][0]["lastPrice"])
-    qty = round(QTY_USDT / price * LEVERAGE, 2)
-    session.place_order(
-        category="linear",
-        symbol=SYMBOL,
-        side=side,
-        order_type="Market",
-        qty=qty,
-        reduce_only=False,
-        time_in_force="GoodTillCancel"
-    )
-    msg = f"[TRADE] {side} order at {price:.4f} | Qty: {qty}"
-    print(msg)
-    send_telegram(msg)
+    try:
+        price = float(session.get_orderbook(symbol=SYMBOL)["result"]["b"][0][0])
+        order = session.place_order(
+            category="linear",
+            symbol=SYMBOL,
+            side=side,
+            order_type="Market",
+            qty=round(QTY_USDT * LEVERAGE / price, 2),
+            time_in_force="GoodTillCancel",
+            reduce_only=False
+        )
+        print(f"[ORDER] {side} → {order['retMsg']}")
+        send_telegram(f"✅ Ordine {side} eseguito: {order['retMsg']}")
+    except Exception as e:
+        print("[ERRORE]", e)
+        send_telegram(f"[ERRORE] {e}")
 
-# 🔁 Ciclo principale
+def send_telegram(msg):
+    try:
+        bot = telegram.Bot(token=TG_TOKEN)
+        bot.send_message(chat_id=TG_CHAT_ID, text=msg)
+    except Exception as e:
+        print("[TELEGRAM ERROR]", e)
+
+# === CICLO PRINCIPALE ===
 def main_loop():
     keep_alive()
+    send_telegram("🤖 Bot avviato e operativo.")
     while True:
         try:
             data = get_klines()
@@ -98,10 +87,6 @@ def main_loop():
 
         time.sleep(60)
 
-# ▶️ Avvio
+# === AVVIO ===
 if __name__ == "__main__":
-    send_telegram("🤖 Bot avviato e operativo.")
-    print("🔥 Ciclo partito")
-send_telegram("🔥 Ciclo monitoraggio partito correttamente.")
-
     main_loop()
