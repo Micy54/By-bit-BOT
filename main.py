@@ -4,10 +4,11 @@ import requests
 from pybit.unified_trading import HTTP
 from keep_alive import keep_alive
 
+# ✅ Coin aggiornata da FARTCOINUSDT → DOGEUSDT
 API_KEY = os.getenv("BYBIT_API_KEY")
 API_SECRET = os.getenv("BYBIT_API_SECRET")
-SYMBOL = "FARTCOINUSDT"
-INTERVAL = 1
+SYMBOL = "DOGEUSDT"
+INTERVAL = 1  # minuti
 QTY_USDT = 3
 LEVERAGE = 5
 
@@ -39,7 +40,7 @@ def bollinger(data, period=20):
 
 def place_order(side):
     price = float(session.get_ticker(symbol=SYMBOL)["result"]["list"][0]["lastPrice"])
-    qty = round(QTY_USDT / price * LEVERAGE, 4)
+    qty = round(QTY_USDT / price * LEVERAGE, 2)
     session.place_order(
         category="linear",
         symbol=SYMBOL,
@@ -49,7 +50,7 @@ def place_order(side):
         reduce_only=False,
         time_in_force="GoodTillCancel"
     )
-    print(f"{side} order placed at {price}")
+    print(f"[TRADE] {side} order placed at {price} | Qty: {qty}")
 
 def main_loop():
     keep_alive()
@@ -60,7 +61,7 @@ def main_loop():
             ma, upper, lower = bollinger(data)
 
             last_price = data[-1]
-            print(f"RSI: {rsi_value:.2f} | Price: {last_price:.4f}")
+            print(f"[MONITOR] RSI: {rsi_value:.2f} | Price: {last_price:.4f}")
 
             if rsi_value < 25 and last_price < lower:
                 place_order("Buy")
@@ -68,7 +69,7 @@ def main_loop():
                 place_order("Sell")
 
         except Exception as e:
-            print("Errore:", e)
+            print("[ERRORE]", e)
 
         time.sleep(60)
 
