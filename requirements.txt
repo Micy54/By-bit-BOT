@@ -2,3 +2,4 @@ flask
 pybit
 requests
 numpy
+python-telegram-bot==13.15
