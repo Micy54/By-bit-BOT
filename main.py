@@ -82,8 +82,10 @@ def main_loop():
             last_price = data[-1]
 
             print(f"[MONITOR] RSI: {rsi_value:.2f} | Price: {last_price:.4f}")
+            send_telegram(f"[MONITOR] RSI: {rsi_value:.2f} | Price: {last_price:.4f}")
 
-            if rsi_value < 25 and last_price < lower:
+            # 🧪 TEST: RSI trigger più facile
+            if rsi_value < 50 and last_price < lower:
                 place_order("Buy")
             elif rsi_value > 75 and last_price > upper:
                 place_order("Sell")
