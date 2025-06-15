@@ -1,9 +1,9 @@
 from flask import Flask
 from threading import Thread
 
-app = Flask("")
+app = Flask(__name__)
 
-@app.route("/")
+@app.route('/')
 def home():
     return "Bot attivo!"
 
@@ -12,4 +12,5 @@ def run():
 
 def keep_alive():
     t = Thread(target=run)
+    t.daemon = True
     t.start()
