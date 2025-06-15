@@ -34,12 +34,28 @@ def main():
     send_msg("Bot partito su DOGE!")
     while True:
         try:
-            prices = get_prices()
-            # TODO: calcola ema_fast, ema_slow, condizioni di entrata/uscita
-            # TODO: esegui order via: session.place_active_order(...)
-            # TODO: notifica e log
+            closes = get_prices()
+            ema9 = get_ema(closes, 9)
+            ema21 = get_ema(closes, 21)
+
+            size, side = get_position()
+
+            msg = f"EMA9: {ema9:.6f} | EMA21: {ema21:.6f} | Posizione: {side} - Size: {size}"
+            print(msg)
+            send_msg(msg)
+
+            if ema9 > ema21 and (size == 0 or side == "Sell"):
+                close_position()
+                open_position("Buy")
+
+            elif ema9 < ema21 and (size == 0 or side == "Buy"):
+                close_position()
+                open_position("Sell")
+
             time.sleep(60)
+
         except Exception as e:
+            send_msg(f"[ERROR] {e}")
             print(f"[ERROR] {e}")
             time.sleep(30)
 
