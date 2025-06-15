@@ -101,4 +101,7 @@ def main_loop():
 # ▶️ Avvio
 if __name__ == "__main__":
     send_telegram("🤖 Bot avviato e operativo.")
+    print("🔥 Ciclo partito")
+send_telegram("🔥 Ciclo monitoraggio partito correttamente.")
+
     main_loop()
