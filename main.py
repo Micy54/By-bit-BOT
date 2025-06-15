@@ -4,7 +4,16 @@ import requests
 from pybit.unified_trading import HTTP
 from keep_alive import keep_alive
 import numpy as np
-import telegram
+import telepot
+TG_TOKEN = "7704558648:AAEf-9T8wzy650t1QetQ6TfcbhK6gxuxpQU"
+bot = telepot.Bot(TG_TOKEN)
+
+def send_telegram(msg):
+    try:
+        bot.sendMessage(TG_CHAT_ID, msg)
+    except Exception as e:
+        print(f"[ERRORE Telegram] {e}")
+
 
 # === CONFIG ===
 API_KEY = os.getenv("BYBIT_API_KEY")
